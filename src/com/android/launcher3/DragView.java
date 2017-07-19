@@ -311,15 +311,17 @@ public class DragView extends View {
     public void show(int touchX, int touchY) {
         mDragLayer.addView(this);
 
-        // Start the pick-up animation
+        // Start the pick-up animation启动拾取动画
         DragLayer.LayoutParams lp = new DragLayer.LayoutParams(0, 0);
         lp.width = mBitmap.getWidth();
         lp.height = mBitmap.getHeight();
         lp.customPosition = true;
+		//设置显示位置
         setLayoutParams(lp);
         setTranslationX(touchX - mRegistrationX);
         setTranslationY(touchY - mRegistrationY);
         // Post the animation to skip other expensive work happening on the first frame
+          //动画播放
         post(new Runnable() {
             public void run() {
                 mAnim.start();

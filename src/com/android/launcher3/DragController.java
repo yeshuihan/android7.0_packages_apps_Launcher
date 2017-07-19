@@ -239,13 +239,14 @@ public class DragController {
         mIsAccessibleDrag = accessible;
 
         mDragObject = new DropTarget.DragObject();
-
+		//创建拖拽对象
         final DragView dragView = mDragObject.dragView = new DragView(mLauncher, b, registrationX,
                 registrationY, 0, 0, b.getWidth(), b.getHeight(), initialDragViewScale);
 
         mDragObject.dragComplete = false;
         if (mIsAccessibleDrag) {
             // For an accessible drag, we assume the view is being dragged from the center.
+             //对于访问的拖拽，我们假设视图被从中心拖动。
             mDragObject.xOffset = b.getWidth() / 2;
             mDragObject.yOffset = b.getHeight() / 2;
             mDragObject.accessibleDrag = true;
@@ -266,8 +267,8 @@ public class DragController {
         }
 		// 触摸反馈
         mLauncher.getDragLayer().performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
-        dragView.show(mMotionDownX, mMotionDownY);
-        handleMoveEvent(mMotionDownX, mMotionDownY);
+        dragView.show(mMotionDownX, mMotionDownY);//显示DragView对象(将该DragView添加到DragLayer上)
+        handleMoveEvent(mMotionDownX, mMotionDownY);//根据当前的位置处理移动事件
         return dragView;
     }
 
@@ -506,20 +507,24 @@ public class DragController {
     }
 
     private void handleMoveEvent(int x, int y) {
-        mDragObject.dragView.move(x, y);
+        mDragObject.dragView.move(x, y);//将拖拽对象平移移到对应位置
 
         // Drop on someone?
         final int[] coordinates = mCoordinatesTemp;
-        DropTarget dropTarget = findDropTarget(x, y, coordinates);
+        DropTarget dropTarget = findDropTarget(x, y, coordinates);// 查找拖拽目标
+        //更新拖拽对象的位置
         mDragObject.x = coordinates[0];
         mDragObject.y = coordinates[1];
-        checkTouchMove(dropTarget);
-
+        checkTouchMove(dropTarget);	// 检查拖动时的状态̬
+        
+		// 检查我们是否在滚动区域上空盘旋
         // Check if we are hovering over the scroll areas
+        //计算两点之间的距离
         mDistanceSinceScroll += Math.hypot(mLastTouch[0] - x, mLastTouch[1] - y);
+		//更新保存的坐标
         mLastTouch[0] = x;
         mLastTouch[1] = y;
-        checkScrollState(x, y);
+        checkScrollState(x, y);// 对拖动时的翻页进行判断处理
     }
 
     public void forceTouchMove() {
@@ -548,6 +553,7 @@ public class DragController {
     }
 
     @Thunk void checkScrollState(int x, int y) {
+    	//获取翻页的距离
         final int slop = ViewConfiguration.get(mLauncher).getScaledWindowTouchSlop();
         final int delay = mDistanceSinceScroll < slop ? RESCROLL_DELAY : SCROLL_DELAY;
         final DragLayer dragLayer = mLauncher.getDragLayer();
@@ -555,6 +561,7 @@ public class DragController {
         final int backwardsDirection = mIsRtl ? SCROLL_LEFT : SCROLL_RIGHT;
 
         if (x < mScrollZone) {
+		//向前
             if (mScrollState == SCROLL_OUTSIDE_ZONE) {
                 mScrollState = SCROLL_WAITING_IN_ZONE;
                 if (mDragScroller.onEnterScrollArea(x, y, forwardDirection)) {
@@ -563,7 +570,9 @@ public class DragController {
                     mHandler.postDelayed(mScrollRunnable, delay);
                 }
             }
+			
         } else if (x > mScrollView.getWidth() - mScrollZone) {
+        //向后
             if (mScrollState == SCROLL_OUTSIDE_ZONE) {
                 mScrollState = SCROLL_WAITING_IN_ZONE;
                 if (mDragScroller.onEnterScrollArea(x, y, backwardsDirection)) {
@@ -616,6 +625,7 @@ public class DragController {
             mHandler.removeCallbacks(mScrollRunnable);
 
             if (mDragging) {
+				//再判断是否到达可删除的区域
                 PointF vec = isFlingingToDelete(mDragObject.dragSource);
                 if (!DeleteDropTarget.supportsDrop(mDragObject.dragInfo)) {
                     vec = null;
@@ -722,15 +732,15 @@ public class DragController {
     private void drop(float x, float y) {
         final int[] coordinates = mCoordinatesTemp;
         final DropTarget dropTarget = findDropTarget((int) x, (int) y, coordinates);
-
+		// x,y所在区域是否有合适的目标
         mDragObject.x = coordinates[0];
         mDragObject.y = coordinates[1];
         boolean accepted = false;
         if (dropTarget != null) {
-            mDragObject.dragComplete = true;
-            dropTarget.onDragExit(mDragObject);
-            if (dropTarget.acceptDrop(mDragObject)) {
-                dropTarget.onDrop(mDragObject);
+            mDragObject.dragComplete = true;// 标记拖拽完成
+            dropTarget.onDragExit(mDragObject);// 通知拖拽目的对象已离开
+            if (dropTarget.acceptDrop(mDragObject)) {//是否支持放入
+                dropTarget.onDrop(mDragObject);// 拖拽物被放置到拖拽目的   // 这个方法最终将拖拽对象放置到目标位置
                 accepted = true;
             }
         }
@@ -740,18 +750,18 @@ public class DragController {
     private DropTarget findDropTarget(int x, int y, int[] dropCoordinates) {
         final Rect r = mRectTemp;
 
-        final ArrayList<DropTarget> dropTargets = mDropTargets;
+        final ArrayList<DropTarget> dropTargets = mDropTargets;// 遍历拖拽目的对象
         final int count = dropTargets.size();
         for (int i=count-1; i>=0; i--) {
             DropTarget target = dropTargets.get(i);
-            if (!target.isDropEnabled())
+            if (!target.isDropEnabled())// 是否支持放入
                 continue;
 
             target.getHitRectRelativeToDragLayer(r);
-
+			// 更新被拖拽物的位置信息
             mDragObject.x = x;
             mDragObject.y = y;
-            if (r.contains(x, y)) {
+            if (r.contains(x, y)) {// 指定位置是否位于有效出发范围内
 
                 dropCoordinates[0] = x;
                 dropCoordinates[1] = y;

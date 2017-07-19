@@ -392,14 +392,14 @@ public class Workspace extends PagedView
 
         mIsDragOccuring = true;
         updateChildrenLayersEnabled(false);
-        mLauncher.lockScreenOrientation();
+        mLauncher.lockScreenOrientation();// 锁定屏幕
         mLauncher.onInteractionBegin();
         // Prevent any Un/InstallShortcutReceivers from updating the db while we are dragging
-        InstallShortcutReceiver.enableInstallQueue();
+        InstallShortcutReceiver.enableInstallQueue();///正在拖拽的时候，防止卸载或安装导致快捷图标变化更新数据库的操作。
 
         if (mAddNewPageOnDrag) {
             mDeferRemoveExtraEmptyScreen = false;
-            addExtraEmptyScreenOnDrag();
+            addExtraEmptyScreenOnDrag();//添加新的空白页
         }
     }
 
@@ -2721,11 +2721,12 @@ public class Workspace extends PagedView
     public void prepareAccessibilityDrop() { }
 
     public void onDrop(final DragObject d) {
-        mDragViewVisualCenter = d.getVisualCenter(mDragViewVisualCenter);
-        CellLayout dropTargetLayout = mDropToLayout;
+        mDragViewVisualCenter = d.getVisualCenter(mDragViewVisualCenter);//计算拖动View的视觉中心
+        CellLayout dropTargetLayout = mDropToLayout;//拖拽到的页面
 
         // We want the point to be mapped to the dragTarget.
         if (dropTargetLayout != null) {
+			//判断当前是否在Hotseat上，求出相对于dropTargetLayout的视觉中心坐标。
             if (mLauncher.isHotseatLayout(dropTargetLayout)) {
                 mapPointFromSelfToHotseatLayout(mLauncher.getHotseat(), mDragViewVisualCenter);
             } else {
@@ -2735,7 +2736,7 @@ public class Workspace extends PagedView
 
         int snapScreen = WorkspaceStateTransitionAnimation.SCROLL_TO_CURRENT_PAGE;
         boolean resizeOnDrop = false;
-        if (d.dragSource != this) {
+        if (d.dragSource != this) {  //判断是否放置到workspace
             final int[] touchXY = new int[] { (int) mDragViewVisualCenter[0],
                     (int) mDragViewVisualCenter[1] };
             onDropExternal(touchXY, d.dragInfo, dropTargetLayout, false, d);
@@ -2745,30 +2746,34 @@ public class Workspace extends PagedView
             Runnable resizeRunnable = null;
             if (dropTargetLayout != null && !d.cancelled) {
                 // Move internally
-                boolean hasMovedLayouts = (getParentCellLayoutForView(cell) != dropTargetLayout);
-                boolean hasMovedIntoHotseat = mLauncher.isHotseatLayout(dropTargetLayout);
-                long container = hasMovedIntoHotseat ?
+                boolean hasMovedLayouts = (getParentCellLayoutForView(cell) != dropTargetLayout);  //判断是否需要移动页面
+                boolean hasMovedIntoHotseat = mLauncher.isHotseatLayout(dropTargetLayout);//判断是否移动到hotseat
+				//记录包含者是桌面还是hotseat
+				long container = hasMovedIntoHotseat ?
                         LauncherSettings.Favorites.CONTAINER_HOTSEAT :
                         LauncherSettings.Favorites.CONTAINER_DESKTOP;
+				//获取屏幕的id
                 long screenId = (mTargetCell[0] < 0) ?
                         mDragInfo.screenId : getIdForScreen(dropTargetLayout);
                 int spanX = mDragInfo != null ? mDragInfo.spanX : 1;
                 int spanY = mDragInfo != null ? mDragInfo.spanY : 1;
                 // First we find the cell nearest to point at which the item is
                 // dropped, without any consideration to whether there is an item there.
-
+				//找最近一个单元格
                 mTargetCell = findNearestArea((int) mDragViewVisualCenter[0], (int)
                         mDragViewVisualCenter[1], spanX, spanY, dropTargetLayout, mTargetCell);
+				//到单元格的距离
                 float distance = dropTargetLayout.getDistanceFromCell(mDragViewVisualCenter[0],
                         mDragViewVisualCenter[1], mTargetCell);
 
                 // If the item being dropped is a shortcut and the nearest drop
                 // cell also contains a shortcut, then create a folder with the two shortcuts.
+                //如果拖拽的对象是一个快捷图标并且最近的位置上也是一个快捷图标，就创建一个文件夹来防止这两个图标。
                 if (!mInScrollArea && createUserFolderIfNecessary(cell, container,
                         dropTargetLayout, mTargetCell, distance, false, d.dragView, null)) {
                     return;
                 }
-
+				//添加到已存在的文件夹上
                 if (addToExistingFolderIfNecessary(cell, dropTargetLayout, mTargetCell,
                         distance, d, false)) {
                     return;
@@ -2776,6 +2781,7 @@ public class Workspace extends PagedView
 
                 // Aside from the special case where we're dropping a shortcut onto a shortcut,
                 // we need to find the nearest cell location that is vacant
+                //以下是处理将一个shortcut放在一个shortcut上的以外情况
                 ItemInfo item = (ItemInfo) d.dragInfo;
                 int minSpanX = item.spanX;
                 int minSpanY = item.spanY;
@@ -2801,7 +2807,7 @@ public class Workspace extends PagedView
                     AppWidgetResizeFrame.updateWidgetSizeRanges(awhv, mLauncher, resultSpan[0],
                             resultSpan[1]);
                 }
-
+				//拖动时可能落点在别的页面，所以还会有页面滑动的效果
                 if (getScreenIdForPageIndex(mCurrentPage) != screenId && !hasMovedIntoHotseat) {
                     snapScreen = getPageIndexForScreenId(screenId);
                     snapToPage(snapScreen);
@@ -2856,7 +2862,7 @@ public class Workspace extends PagedView
                             });
                         }
                     }
-
+				    //对数据库进行更新的操作。
                     LauncherModel.modifyItemInDatabase(mLauncher, info, container, screenId, lp.cellX,
                             lp.cellY, item.spanX, item.spanY);
                 } else {
